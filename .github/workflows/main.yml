@@ -1,22 +1,38 @@
-name: Windows - LiteManager
 
-on:
-  workflow_dispatch:
+name: CI [MacOS] beta
+
+on: [workflow_dispatch]
 
 jobs:
   build:
-    name: Start Building...
-    runs-on: windows-latest
-    timeout-minutes: 9999
-    
+
+    runs-on: macos-latest
+
     steps:
-      - name: Downloading & Installing Essentials
-        run: |
-          Invoke-WebRequest -Uri "https://gitlab.com/chamod12/lm_win-10_github_rdp/-/raw/main/Downloads.bat" -OutFile "Downloads.bat"
-          cmd /c Downloads.bat
+    - name: Install Brew
+      run: |
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        echo 'eval $(/opt/homebrew/bin/brew shellenv)' >> ~/.zprofile
+        eval $(/opt/homebrew/bin/brew shellenv)
+    - name: Install Ngrok
+      run: |
+        brew install unzip
+        brew install --cask ngrok
+    - name: Adding New User
+      run: |
+        sudo su
+        dscl . -create /Users/joeadmin
+        dscl . -create /Users/joeadmin UserShell /bin/bash
+        dscl . -create /Users/joeadmin RealName "Joe Admin" 
+        dscl . -create /Users/joeadmin UniqueID "510"
+        dscl . -create /Users/joeadmin PrimaryGroupID 20
+        dscl . -create /Users/joeadmin NFSHomeDirectory /Users/joeadmin
+        dscl . -passwd /Users/joeadmin password 
+        dscl . -append /Groups/admin GroupMembership joeadmin
 
-      - name: Connect to LiteManager
-        run: cmd /c show.bat
-
-      - name: Time Counter
-        run: cmd /c loop.bat
+    - name: Ngrok Auth
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      run: |
+        ngrok authtoken $NGROK_AUTH_TOKEN
+        ngrok tcp 22
